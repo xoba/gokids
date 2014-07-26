@@ -144,7 +144,7 @@ func main() {
 
 	sylvia := Website{
 		Title:       "sylvia's website",
-		Greeting:    "Hi!This is my website!I like to play piano!I love to Program!!!",
+		Greeting:    "Hi!This is my website!I like to play piano!I love to Program!!There a  several Games.Click on them. ",
 		Image:       "http://d2jngs55a0uns9.cloudfront.net/ad853ef37ed136a7ee5686c5b0c00cd0bf370f14_NONE_388153.jpg",
 		HasMessages: &file{"sylvia.json"},
 		Links: []string{

@@ -10,7 +10,7 @@ import (
 
 const max = 100
 
-type Messages interface {
+type HasMessages interface {
 	Add(m string)
 	Get() []string
 }
@@ -62,21 +62,17 @@ func check(e error) {
 	}
 }
 
-func main() {
+func (h Website) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	maker := func(messages Messages, title, greeting, image string) func(w http.ResponseWriter, r *http.Request) {
+	msg := r.URL.Query().Get("message")
+	if msg != "" {
+		log.Printf("we got a message: %q\n", msg)
+		h.Add(msg)
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		return
+	}
 
-		return func(w http.ResponseWriter, r *http.Request) {
-
-			msg := r.URL.Query().Get("message")
-			if msg != "" {
-				log.Printf("we got a message: %q\n", msg)
-				messages.Add(msg)
-				http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-				return
-			}
-
-			fmt.Fprintf(w, `<!DOCTYPE html>
+	fmt.Fprintf(w, `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
@@ -88,29 +84,73 @@ func main() {
 <form>
 <input style='padding:0.5em;width:90%%;' autocorrect='off' autocapitalize='none' autocomplete='off' type='text' name='message' autofocus/>
 </form>
-<br/>
-<img src='%s' height='200px'/>
-<ol>`, title, greeting, image)
+`, h.Title, h.Greeting)
 
-			list := messages.Get()
-			n := len(list)
-			if n > max {
-				n = max
-			}
-			for i := 0; i < n; i++ {
-				m := list[len(list)-i-1]
-				fmt.Fprintf(w, "<li> %s </li>", m)
-			}
-			fmt.Fprintf(w, `
-</ol></body>
-</html>
-`)
+	if len(h.Links) > 0 {
+		fmt.Fprintln(w, "<p>here's some of my favorite links:</p>")
+
+		fmt.Fprintln(w, "<ol>")
+		for _, link := range h.Links {
+			fmt.Fprintf(w, "<li>see <a target='_blank' href='%s'>%s</a></li>", link, link)
 		}
+		fmt.Fprintln(w, "</ol>")
 	}
 
-	david := maker(&file{"david.json"}, "david's website", "howdy, this is david's website! if you have any thing to tell me, just tipe the following bellow. have a nice day!!", "http://www.shawnkinley.com/wp-content/uploads/have-a-nice-day.jpg")
+	fmt.Fprintf(w, `<br/>
+<img src='%s' height='200px'/>
+`, h.Image)
 
-	sylvia := maker(&file{"sylvia.json"}, "sylvia's website", "Hi!This is my website!I like to play piano!", "http://d2jngs55a0uns9.cloudfront.net/ad853ef37ed136a7ee5686c5b0c00cd0bf370f14_NONE_388153.jpg")
+	list := h.Get()
+	n := len(list)
+	if n > 0 {
+		fmt.Fprintln(w, "<p> here's some messages left in the past:</p> <ol>")
+		if n > max {
+			n = max
+		}
+		for i := 0; i < n; i++ {
+			m := list[len(list)-i-1]
+			fmt.Fprintf(w, "<li> %s </li>", m)
+		}
+		fmt.Fprintln(w, "</ol>")
+	}
+	fmt.Fprintf(w, `
+</body>
+</html>
+`)
+
+}
+
+type Website struct {
+	Title    string
+	Greeting string
+	Image    string
+	Links    []string
+	HasMessages
+}
+
+func main() {
+
+	david := Website{
+		Title:       "david's website",
+		Greeting:    "Howdy, this is David's website! If you have any thing to tell me, just tipe the following bellow. Have a nice day!!",
+		Image:       "http://www.shawnkinley.com/wp-content/uploads/have-a-nice-day.jpg",
+		HasMessages: &file{"david.json"},
+		Links: []string{
+			"http://www.totaljerkface.com/happy_wheels.tjf",
+			"http://www.sheppardsoftware.com/",
+		},
+	}
+
+	sylvia := Website{
+		Title:       "sylvia's website",
+		Greeting:    "Hi!This is my website!I like to play piano!I love to Program!!!",
+		Image:       "http://d2jngs55a0uns9.cloudfront.net/ad853ef37ed136a7ee5686c5b0c00cd0bf370f14_NONE_388153.jpg",
+		HasMessages: &file{"sylvia.json"},
+		Links: []string{
+			"http://www.poptropica.com/",
+			"http://www.abcya.com/",
+		},
+	}
 
 	kidFunction := func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
@@ -118,9 +158,9 @@ func main() {
 
 		switch r.Host {
 		case "gosylvia.ch":
-			sylvia(w, r)
+			sylvia.ServeHTTP(w, r)
 		case "godavid.ch":
-			david(w, r)
+			david.ServeHTTP(w, r)
 		}
 	}
 

@@ -113,10 +113,11 @@ func (h Website) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprintln(w, "</ol>")
 	}
-	fmt.Fprintf(w, `
+	site := "https://github.com/xoba/gokids"
+	fmt.Fprintf(w, `<p> the software running this site is <a target='_blank' href='%s'>%s</a></p>
 </body>
 </html>
-`)
+`, site, site)
 
 }
 
